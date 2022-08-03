@@ -84,7 +84,7 @@ general <- "Z:/SIESTA/Data/Butlr/"
       out_sum = sum(out),
       inout_sub =  sum(din) - sum(out)
     ), by = c("five_sec")]
-    
+    browser()
     dt_h_sum[,accum := cumsum(inout_sub)]
     min(dt_h_sum$accum)
     dt_o_sum <- dt_o_one[,.(
