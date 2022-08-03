@@ -6,6 +6,7 @@ library(lubridate)
 # 24_039 
 # 24_036
 # 23_104
+# 23_103
 
 rm(list=ls())
 # ==========================
@@ -27,8 +28,8 @@ general <- "Z:/SIESTA/Data/Butlr/"
   # ==========================
   i = 1
   for (sub_name in ls_head_p) {
-    sub_num <- word(sub_name, start = 2, sep = "_")
-    floor_num <-  word(sub_name, start = 1, sep = "_")
+    sub_num <- word(sub_name, start = 2, sep = "_") #Second part of the subject ID
+    floor_num <-  word(sub_name, start = 1, sep = "_") #First part of the subject ID
     dt_h <- fread(paste0(head_p,floor_num,"_",sub_num,"_head.csv"))
     colnames(dt_h) <-  c("Time","din", "exit", "out", "trajectory", "device_id")
     dt_h <- dt_h[,.(Time,din,out)]
@@ -150,16 +151,16 @@ fwrite(five_sec_all, "five_sec_dt.csv")
 # # ==========================
 # ## Read csv
 # # ==========================
-# floor = 23
-# sub_num <-"104"
-# #setwd(head_p)
-# dt_h <- fread(paste0(head_p,floor,"_",sub_num,"_head.csv"))
-# dt_o <- fread(paste0(occupancy_p,floor,"_",sub_num, "_occ.csv"))
-# # Subset columns
-# colnames(dt_h) <-  c("Time","din", "exit", "out", "trajectory", "device_id")
-# dt_h <- dt_h[,.(Time,din,out)]
-# 
-# dt_o <- dt_o[,.(Time, occupancy)]
+floor = 23
+sub_num <-"103"
+#setwd(head_p)
+dt_h <- fread(paste0(head_p,floor,"_",sub_num,"_head.csv"))
+dt_o <- fread(paste0(occupancy_p,floor,"_",sub_num, "_occ.csv"))
+# Subset columns
+colnames(dt_h) <-  c("Time","din", "exit", "out", "trajectory", "device_id")
+dt_h <- dt_h[,.(Time,din,out)]
+
+dt_o <- dt_o[,.(Time, occupancy)]
 
 
 ## ==========================
@@ -263,6 +264,7 @@ dt_processed$five_sec<-NULL
 preprocessed_p <- paste0(general,"Preprocessed/Butlr/Level_1/",floor)
 setwd(preprocessed_p)
 
+
 fwrite(dt_processed, paste0(floor,"_",sub_num,"_preprocessed.csv"))
 
 
@@ -277,3 +279,54 @@ dt_o_changed<-dt_o[changed != 0, ]
 
 
 dt_h[]
+
+start_t <-min(dt_processed$time)
+end_t <-max(dt_processed$time)
+max(dt_all_five_min$accum)
+max(dt_all$accum)
+dt <-na.omit(dt_all)
+max(dt$accum)
+min(dt$accum)
+max(dt_processed$accum)
+dt %>% filter(accum == 15)
+
+dt_all_five_min$day <- date(dt_all_five_min$five_min)
+dt_all_five_min$t <- format(as.POSIXct(
+  dt_all_five_min$five_min),format = "%H:%M:%S")
+dt_all_five_min <- mutate_if(dt_all_five_min, is.numeric, ~replace(., is.na(.), 0))
+
+dt_na_omit <- na.omit(dt_processed)
+dt_na_omit %>% 
+  group_by(day) %>%
+  count(accum)
+
+library(ggplot2)
+# compare different dates: 
+dt_all_five_min %>%
+  filter(day >= 2022-06-18) %>%
+  ggplot(aes(t, accum)) +
+  geom_point() + 
+  facet_grid(rows = vars(day))
+# tread within one day: 
+dt_all_five_min %>% 
+  filter(accum!=0) %>%
+  filter(day == '2022-06-18') %>%
+  ggplot() + 
+  geom_point(aes(t, accum), color = 'red') + 
+  geom_point(aes(t, in_sum), color = 'blue') + 
+  geom_point(aes(t, out_sum), color = 'green')
+
+# peak: in_sum & out_sum
+d_6_18 <- dt_all_five_min  %>%
+  filter(day == '2022-06-18') %>%
+  filter(t > 08:55:00 & t <= 09:02:00)
+
+
+dt_all_five_min %>%
+  filter(day == '2022-06-18') %>% 
+  filter(t > 07:55:00 & t < 8:00:00) %>%
+  ggplot() + 
+  geom_point(aes(t, accum), position = position_jitter(h = 0.15), color = 'red') + 
+  geom_point(aes(t, in_sum), color = 'blue') + 
+  geom_point(aes(t, out_sum), position = position_jitter(h = 0.15), color = 'green') +
+  theme(axis.text.x = element_text(angle = 90.))
