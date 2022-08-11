@@ -84,7 +84,7 @@ general <- "Z:/SIESTA/Data/Butlr/"
       out_sum = sum(out),
       inout_sub =  sum(din) - sum(out)
     ), by = c("five_sec")]
-    browser()
+
     dt_h_sum[,accum := cumsum(inout_sub)]
     min(dt_h_sum$accum)
     dt_o_sum <- dt_o_one[,.(
@@ -121,7 +121,8 @@ general <- "Z:/SIESTA/Data/Butlr/"
     i <- i + 1
   }
   
-
+# before this part, for loop seems to go through everything,
+# after running do.call, there's missing data issue. 
 five_min_all <- do.call(rbind,ls_dt_five_min)
 five_sec_all <- do.call(rbind,ls_dt_five_sec)
 
@@ -151,9 +152,14 @@ fwrite(five_sec_all, "five_sec_dt.csv")
 # # ==========================
 # ## Read csv
 # # ==========================
+
+# # ==========================
+# Tested everyting within the for loop on individual file
+# No error 
+# # ==========================
 floor = 23
 sub_num <-"103"
-#setwd(head_p)
+setwd(head_p)
 dt_h <- fread(paste0(head_p,floor,"_",sub_num,"_head.csv"))
 dt_o <- fread(paste0(occupancy_p,floor,"_",sub_num, "_occ.csv"))
 # Subset columns
@@ -172,8 +178,8 @@ dt_o$timestamp <- as.POSIXct(dt_o$Time)
 
 dt_h$Time <- NULL
 dt_o$Time <- NULL
-
-
+ 
+ 
 if (dt_h$timestamp[1] > dt_o$timestamp[1]) {
   dt_o <- dt_o[timestamp > dt_h[1,timestamp], ]
   new_o<- dt_h[1,.(occupancy = 0, timestamp = timestamp)]
@@ -204,12 +210,12 @@ dt_h_sum <- dt_h[,.(
 
 dt_h_sum[,accum := cumsum(inout_sub)]
 min(dt_h_sum$accum)
-
+ 
 dt_o_sum <- dt_o_one[,.(
   occupany_sum = max(occupancy)
 ), by = c("five_sec")]
 
-
+ 
 dt_all <- merge(dt_h_sum,dt_o_sum, by = "five_sec", all = T)
 
 
@@ -219,15 +225,15 @@ dt_h_sum_fivemin <- dt_h[,.(
   out_sum = sum(out),
   inout_sub =  sum(din) - sum(out)
 ), by = c("five_min")]
-
+ 
 dt_h_sum_fivemin[,accum := cumsum(inout_sub)]
 min(dt_h_sum$accum)
 
 dt_o_sum_fivemin <- dt_o_one[,.(
   occupany_sum = max(occupancy)
 ), by = c("five_min")]
-
-
+ 
+ 
 dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all = T)
 
 
@@ -235,7 +241,6 @@ dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all
 
 # dt_all <- dt_all[!(occupany_sum == 0 & in_sum %in% NA),]
 
-# 
 # if(dt_all[1,din] == 0 & dt_all[1,out] == 0){
 #   dt_all[,occupancy_by_head_count := din - out]
 #   acc_sum <- cumsum(dt_all$occupancy_by_head_count)
@@ -256,77 +261,79 @@ dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all
 #                       head_count_accumulation = accum_head_count,
 #                       occupancy = occupancy)]
 
-dt_processed <- dt_all
-dt_processed$time <- dt_processed$five_sec
-dt_processed$time <- as.character(dt_processed$time)
-dt_processed$five_sec<-NULL
-
-preprocessed_p <- paste0(general,"Preprocessed/Butlr/Level_1/",floor)
-setwd(preprocessed_p)
-
-
-fwrite(dt_processed, paste0(floor,"_",sub_num,"_preprocessed.csv"))
+# dt_processed <- dt_all
+# dt_processed$time <- dt_processed$five_sec
+# dt_processed$time <- as.character(dt_processed$time)
+# dt_processed$five_sec<-NULL
+# 
+# preprocessed_p <- paste0(general,"Preprocessed/Butlr/Level_1/",floor)
+# setwd(preprocessed_p)
+# 
+# 
+# fwrite(dt_processed, paste0(floor,"_",sub_num,"_preprocessed.csv"))
 
 
 ## ==========================
 ## Detect error
 # ==========================
 
+# 
+# dt_o[, occupancy_delayed := shift(occupancy)]
+# dt_o[, changed := occupancy_delayed- occupancy]
+# dt_o_changed<-dt_o[changed != 0, ]
+# 
+# 
+# dt_h[]
 
-dt_o[, occupancy_delayed := shift(occupancy)]
-dt_o[, changed := occupancy_delayed- occupancy]
-dt_o_changed<-dt_o[changed != 0, ]
-
-
-dt_h[]
-
-start_t <-min(dt_processed$time)
-end_t <-max(dt_processed$time)
-max(dt_all_five_min$accum)
-max(dt_all$accum)
-dt <-na.omit(dt_all)
-max(dt$accum)
-min(dt$accum)
-max(dt_processed$accum)
-dt %>% filter(accum == 15)
-
-dt_all_five_min$day <- date(dt_all_five_min$five_min)
-dt_all_five_min$t <- format(as.POSIXct(
-  dt_all_five_min$five_min),format = "%H:%M:%S")
-dt_all_five_min <- mutate_if(dt_all_five_min, is.numeric, ~replace(., is.na(.), 0))
-
-dt_na_omit <- na.omit(dt_processed)
-dt_na_omit %>% 
-  group_by(day) %>%
-  count(accum)
-
-library(ggplot2)
-# compare different dates: 
-dt_all_five_min %>%
-  filter(day >= 2022-06-18) %>%
-  ggplot(aes(t, accum)) +
-  geom_point() + 
-  facet_grid(rows = vars(day))
-# tread within one day: 
-dt_all_five_min %>% 
-  filter(accum!=0) %>%
-  filter(day == '2022-06-18') %>%
-  ggplot() + 
-  geom_point(aes(t, accum), color = 'red') + 
-  geom_point(aes(t, in_sum), color = 'blue') + 
-  geom_point(aes(t, out_sum), color = 'green')
-
-# peak: in_sum & out_sum
-d_6_18 <- dt_all_five_min  %>%
-  filter(day == '2022-06-18') %>%
-  filter(t > 08:55:00 & t <= 09:02:00)
+## Prep for graphing: 
+# start_t <-min(dt_processed$time)
+# end_t <-max(dt_processed$time)
+# max(dt_all_five_min$accum)
+# dt <-na.omit(dt_all)
+# max(dt$accum)
+# min(dt$accum)
+# max(dt_processed$accum)
+# dt %>% filter(accum == 15)
+# 
+# dt_all_five_min$day <- date(dt_all_five_min$five_min)
+# dt_all_five_min$t <- format(as.POSIXct(
+#   dt_all_five_min$five_min),format = "%H:%M:%S")
+# dt_all_five_min <- mutate_if(dt_all_five_min, is.numeric, ~replace(., is.na(.), 0))
+# 
+# dt_na_omit <- na.omit(dt_processed)
+# dt_na_omit %>% 
+#   group_by(day) %>%
+#   count(accum)
 
 
-dt_all_five_min %>%
-  filter(day == '2022-06-18') %>% 
-  filter(t > 07:55:00 & t < 8:00:00) %>%
-  ggplot() + 
-  geom_point(aes(t, accum), position = position_jitter(h = 0.15), color = 'red') + 
-  geom_point(aes(t, in_sum), color = 'blue') + 
-  geom_point(aes(t, out_sum), position = position_jitter(h = 0.15), color = 'green') +
-  theme(axis.text.x = element_text(angle = 90.))
+## Graphing: 
+# library(ggplot2)
+# # compare different dates: 
+# dt_all_five_min %>%
+#   filter(day >= 2022-06-18) %>%
+#   ggplot(aes(t, accum)) +
+#   geom_point() + 
+#   facet_grid(rows = vars(day))
+# # tread within one day: 
+# dt_all_five_min %>% 
+#   filter(accum!=0) %>%
+#   filter(day == '2022-06-18') %>%
+#   ggplot() + 
+#   geom_point(aes(t, accum), color = 'red') + 
+#   geom_point(aes(t, in_sum), color = 'blue') + 
+#   geom_point(aes(t, out_sum), color = 'green')
+# 
+# # peak: in_sum & out_sum
+# d_6_18 <- dt_all_five_min  %>%
+#   filter(day == '2022-06-18') %>%
+#   filter(t > 08:55:00 & t <= 09:02:00)
+
+
+# dt_all_five_min %>%
+#   filter(day == '2022-06-18') %>% 
+#   filter(t > 07:55:00 & t < 8:00:00) %>%
+#   ggplot() + 
+#   geom_point(aes(t, accum), position = position_jitter(h = 0.15), color = 'red') + 
+#   geom_point(aes(t, in_sum), color = 'blue') + 
+#   geom_point(aes(t, out_sum), position = position_jitter(h = 0.15), color = 'green') +
+#   theme(axis.text.x = element_text(angle = 90.))
