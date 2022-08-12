@@ -85,8 +85,9 @@ general <- "Z:/SIESTA/Data/Butlr/"
       inout_sub =  sum(din) - sum(out)
     ), by = c("five_sec")]
 
+    dt_h_sum <- dt_h_sum[!duplicated(dt_h_sum), ]
     dt_h_sum[,accum := cumsum(inout_sub)]
-    min(dt_h_sum$accum)
+    #min(dt_h_sum$accum)
     dt_o_sum <- dt_o_one[,.(
       occupany_sum = max(occupancy)
     ), by = c("five_sec")]
@@ -104,8 +105,9 @@ general <- "Z:/SIESTA/Data/Butlr/"
       inout_sub =  sum(din) - sum(out)
     ), by = c("five_min")]
     
+    dt_h_sum_fivemin <- dt_h_sum_fivemin[!duplicated(dt_h_sum_fivemin), ]
     dt_h_sum_fivemin[,accum := cumsum(inout_sub)]
-    min(dt_h_sum$accum)
+    #min(dt_h_sum$accum)
     
     dt_o_sum_fivemin <- dt_o_one[,.(
       occupany_sum = max(occupancy)
@@ -158,7 +160,7 @@ fwrite(five_sec_all, "five_sec_dt.csv")
 # No error 
 # # ==========================
 floor = 23
-sub_num <-"103"
+sub_num <-"118"
 setwd(head_p)
 dt_h <- fread(paste0(head_p,floor,"_",sub_num,"_head.csv"))
 dt_o <- fread(paste0(occupancy_p,floor,"_",sub_num, "_occ.csv"))
@@ -208,6 +210,7 @@ dt_h_sum <- dt_h[,.(
   inout_sub =  sum(din) - sum(out)
 ), by = c("five_sec")]
 
+dt_h_sum <- dt_h_sum[!duplicated(dt_h_sum), ]
 dt_h_sum[,accum := cumsum(inout_sub)]
 min(dt_h_sum$accum)
  
@@ -219,13 +222,13 @@ dt_o_sum <- dt_o_one[,.(
 dt_all <- merge(dt_h_sum,dt_o_sum, by = "five_sec", all = T)
 
 
-
 dt_h_sum_fivemin <- dt_h[,.(
   in_sum = sum(din),
   out_sum = sum(out),
   inout_sub =  sum(din) - sum(out)
 ), by = c("five_min")]
- 
+
+dt_h_sum_fivemin <- dt_h_sum_fivemin[!duplicated(dt_h_sum_fivemin), ]
 dt_h_sum_fivemin[,accum := cumsum(inout_sub)]
 min(dt_h_sum$accum)
 
@@ -235,6 +238,20 @@ dt_o_sum_fivemin <- dt_o_one[,.(
  
  
 dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all = T)
+
+#dt_processed <- dt_all_five_min
+#dt_processed$time <- dt_processed$five_min
+#dt_processed$time <- as.character(dt_processed$time)
+#dt_processed$five_sec<-NULL
+
+#five_sec data: 
+preprocessed_p_sec <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/23")
+setwd(preprocessed_p_sec)
+fwrite(dt_all, paste0(floor, "_",sub_num,"_preprocessed.csv"))
+#five_min data:
+preprocessed_p_min <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/23_fiv_min")
+setwd(preprocessed_p_min)
+fwrite(dt_all_five_min, paste0(floor, "_",sub_num,"_preprocessed.csv"))
 
 
 
