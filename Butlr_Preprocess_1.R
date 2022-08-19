@@ -160,7 +160,7 @@ fwrite(five_sec_all, "five_sec_dt.csv")
 # No error 
 # # ==========================
 floor = 23
-sub_num <-"118"
+sub_num <-"100"
 setwd(head_p)
 dt_h <- fread(paste0(head_p,floor,"_",sub_num,"_head.csv"))
 dt_o <- fread(paste0(occupancy_p,floor,"_",sub_num, "_occ.csv"))
@@ -195,6 +195,7 @@ if (dt_h$timestamp[1] > dt_o$timestamp[1]) {
 
 dt_o$one_sec <- cut(dt_o$timestamp, breaks = "1 sec")
 dt_o_one <- dt_o[,.(occupancy = sum(occupancy)),by = c("one_sec")]
+#reason to use sum(): to prevent missing counts across occupancy sensors 
 
 dt_o_one$one_sec <- as.POSIXct(dt_o_one$one_sec)
 
@@ -217,10 +218,8 @@ min(dt_h_sum$accum)
 dt_o_sum <- dt_o_one[,.(
   occupany_sum = max(occupancy)
 ), by = c("five_sec")]
-
  
 dt_all <- merge(dt_h_sum,dt_o_sum, by = "five_sec", all = T)
-
 
 dt_h_sum_fivemin <- dt_h[,.(
   in_sum = sum(din),
@@ -245,16 +244,18 @@ dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all
 #dt_processed$five_sec<-NULL
 
 #five_sec data: 
-preprocessed_p_sec <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/23")
+preprocessed_p_sec <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/24")
 setwd(preprocessed_p_sec)
 fwrite(dt_all, paste0(floor, "_",sub_num,"_preprocessed.csv"))
 #five_min data:
-preprocessed_p_min <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/23_fiv_min")
+preprocessed_p_min <- paste0("Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/24_fiv_min")
 setwd(preprocessed_p_min)
 fwrite(dt_all_five_min, paste0(floor, "_",sub_num,"_preprocessed.csv"))
 
 
-
+# =====================
+# Investigation: Graphs
+# =====================
 
 # dt_all <- dt_all[!(occupany_sum == 0 & in_sum %in% NA),]
 
