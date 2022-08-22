@@ -152,41 +152,7 @@ dt_processed$time <- as.character(dt_processed$time)
 dt_processed$five_sec<-NULL
 
 
-# ============
-# Graph to spot for abnormal data 
-# ============
 
-preprocessed <- "Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/23_fiv_min"
-setwd(preprocessed)
-save_p <- "Z:/SIESTA/Data/Butlr/Butlr_SIESTA/Abnormal_data"
-
-ls_dt <- list.files(path = preprocessed)
-ls_abn_dt_five_min <- list()
-
-# incomeplete loop tying to gather all abnormal data: 
-i = 1
-for (sub_name in ls_dt) {
-  sub_num <- word(sub_name, start = 2, sep = "_") #Second part of the subject ID
-  floor_num <-  word(sub_name, start = 1, sep = "_") #First part of the subject ID
-  dt <- read_csv(paste0(floor_num,"_",sub_num,"_preprocessed.csv"))
-  dt <- dt %>% drop_na(in_sum)
-  
-  abn_dt <- dt[dt$in_sum >= 10, ]
-  
-  dt$floor <- floor_num
-  dt$sub <- sub_num
-  
-  ls_abn_dt_five_min[[i]] <- abn_dt
-  i = i + 1
-}
-
-
-abn_five_min_all <- do.call(rbind,ls_abn_dt_five_min)
-abn_five_sec_all <- do.call(rbind,abn_five_sec_all)
-
-setwd(save_p)
-fwrite(abn_five_min_all,"abn_five_min_all.csv")
-fwrite(abn_five_sec_all, "abn_five_sec_all.csv")
 ## ========== graph ============
 #23_100: 3 abnormal observations, 1 obs. > 45
 dt_23_100 <- fread(paste0("23_100_preprocessed.csv"))
@@ -220,7 +186,7 @@ rm(list = ls())
 dt <- fread(paste0("23_100_preprocessed.csv"))
 dt <- dt %>% drop_na(in_sum)
 abn_dt <- dt[dt$in_sum >= 10, ]
-# ========== abnormal data investigation ===========
+
 # 23_100: 
 floor = 23
 sub_num <-"100"
@@ -234,55 +200,63 @@ dt_h <- dt_h[,.(Time,din,out)]
 dt_o <- dt_o[,.(Time, occupancy)]
 
 
-## ==========================
-## Merge file with time axis
-# ==========================
 
-dt_h$timestamp <- as.POSIXct(dt_h$Time)
-dt_o$timestamp <- as.POSIXct(dt_o$Time)
+# =============== Summary of abnormal data =====================
+library(openxlsx)
+library(dplyr)
+Butlr_installed <- "Z:/SIESTA/Data Collection/Daily Worksheets"
+setwd(Butlr_installed)
+Butlr_installed <- read.xlsx("Butlr_install_log.xlsx")
+str(Butlr_installed)
+placement <- data.frame(Subject = Butlr_installed$Subject, 
+                        Room = Butlr_installed$Room, 
+                        Kit_n = Butlr_installed$Butlr)
 
-dt_h$Time <- NULL
-dt_o$Time <- NULL
+preprocessed <- "Z:/SIESTA/Data/Preprocessed/Butlr/Level_1/24_fiv_min"
+save_p <- "Z:/SIESTA/Data/Butlr/Butlr_SIESTA/Abnormal_data"
+
+setwd(preprocessed)
+
+ls_dt <- list.files(path = preprocessed)
+ls_abn_dt_five_min <- list()
+
+# incomeplete loop tying to gather all abnormal data: 
+i = 1
+for (sub in ls_dt) {
+  sub <- word(sub, start = 1, end = 2, sep = "_") #Subject ID
+  dt <- read_csv(paste0(sub,"_preprocessed.csv"))
+  dt <- dt %>% drop_na(in_sum)
+  
+  abn_dt <- dt[dt$in_sum >= 10, ]
+  abn_dt$Subject <- sub
+  
+  ls_abn_dt_five_min[[i]] <- abn_dt
+  i = i + 1
+}
+
+#abn_five_min__23fl_all <- do.call(rbind,ls_abn_dt_five_min)
+abn_five_min__24fl_all <- do.call(rbind,ls_abn_dt_five_min)
+#abn_five_sec_all <- do.call(rbind,abn_five_sec_all)
+
+#add room & kit numbers
+#abn_five_min__23fl_all <- inner_join(placement, abn_five_min__23fl_all, by = "Subject")
+abn_five_min__24fl_all <- inner_join(placement, abn_five_min__24fl_all, by = "Subject")
+
+#split the time:
+abn_five_min__23fl_all <- abn_five_min__23fl_all %>%
+  mutate(date = date(abn_five_min__23fl_all$five_min), .before = five_min )%>%
+  mutate(time = format(as.POSIXct(abn_five_min__23fl_all$five_min),
+                       format = "%H:%M:%S"), .before = five_min ) %>% 
+  select(., -c("five_min"))
+abn_five_min__24fl_all <- abn_five_min__24fl_all %>%
+  mutate(date = date(abn_five_min__24fl_all$five_min), .before = five_min )%>%
+  mutate(time = format(as.POSIXct(abn_five_min__24fl_all$five_min),
+                       format = "%H:%M:%S"), .before = five_min ) %>% 
+  select(., -c("five_min"))
 
 
-if (dt_h$timestamp[1] > dt_o$timestamp[1]) {
-  dt_o <- dt_o[timestamp > dt_h[1,timestamp], ]
-  new_o<- dt_h[1,.(occupancy = 0, timestamp = timestamp)]
-  dt_o <- rbind(new_o,dt_o)
-} else if (dt_o$timestamp[1] >= dt_h$timestamp[1]) {
-  dt_h <- dt_h[timestamp >= dt_o[1,timestamp], ] 
-  new_h<- dt_o[1,.(din = 0, out = 0, timestamp = timestamp)]
-  dt_h <- rbind(new_h,dt_h)
-} 
+setwd(save_p)
+fwrite(abn_five_min__23fl_all,"abn_five_min__23fl_all.csv")
+fwrite(abn_five_min__24fl_all,"abn_five_min__24fl_all.csv")
+#fwrite(abn_five_sec_all, "abn_five_sec_all.csv")
 
-
-dt_o$one_sec <- cut(dt_o$timestamp, breaks = "1 sec")
-dt_o_one <- dt_o[,.(occupancy = sum(occupancy)),by = c("one_sec")]
-#reason to use sum(): to prevent missing counts across occupancy sensors 
-
-dt_o_one$one_sec <- as.POSIXct(dt_o_one$one_sec)
-
-dt_h$one_sec <- cut(dt_h$timestamp, breaks = "1 sec")
-dt_h$five_sec <- cut(dt_h$timestamp, breaks = "5 sec")
-dt_o_one$five_sec <- cut(dt_o_one$one_sec, breaks = "5 sec")
-
-dt_h$five_min <- cut(dt_h$timestamp, breaks = "5 min")
-dt_o_one$five_min <- cut(dt_o_one$one_sec, breaks = "5 min")
-
-dt_h_sum <- dt_h[,.(
-  in_sum = sum(din),
-  out_sum = sum(out),
-  inout_sub =  sum(din) - sum(out)
-), by = c("five_sec")]
-
-dt_h_sum <- dt_h_sum[!duplicated(dt_h_sum), ]
-dt_h_sum[,accum := cumsum(inout_sub)]
-min(dt_h_sum$accum)
-
-dt_o_sum <- dt_o_one[,.(
-  occupany_sum = max(occupancy)
-), by = c("five_sec")]
-
-dt_all <- merge(dt_h_sum,dt_o_sum, by = "five_sec", all = T)
-
-dt_one_sec <- merge(dt_h, dt_o, by = "one_sec")
