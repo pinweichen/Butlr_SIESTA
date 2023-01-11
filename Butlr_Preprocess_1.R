@@ -145,6 +145,10 @@ fwrite(five_sec_all, "five_sec_dt.csv")
 ## ==========================
 ## Merge file with time axis
 # ==========================
+general <- "Z:/SIESTA/Data/Butlr/"
+setwd(general)
+five_min_all<-fread("five_min_dt.csv")
+five_sec_all<-fread( "five_sec_dt.csv")
 
 remove(ls_dt_five_sec)
 rm(dt_all)
@@ -184,9 +188,15 @@ fwrite(five_night_average, "five_min_floor_avg.csv")
 wilcox.test(five_night_sub$avg_sleep_disruption ~ five_night_sub$floor, exact = F)
 # W = 326, p-value = 0.2921
 
+
+
+
 # Restart analysiss from here ==================================
 setwd(general)
 five_night_sub <- fread("five_min_sub_level.csv")
+
+five_night_sub[,percentage := avg_sleep_disruption]
+
 five_night_sub[avg_sleep_disruption <= 2, disrupt_cat := "0 - 2"]
 five_night_sub[avg_sleep_disruption > 2 & avg_sleep_disruption <= 4, disrupt_cat := "2 - 4"]
 five_night_sub[avg_sleep_disruption > 4 & avg_sleep_disruption <= 6, disrupt_cat := "4 - 6"]
@@ -208,6 +218,20 @@ total_disrupt <- ggplot(five_night_sub, aes( x = disrupt_cat, fill = floor)) +
 
 print(total_disrupt)
 ggsave("disruption_histogram.png", plot =total_disrupt ,path = paste0(general,"/Graph/"),
+       device = "png", width = 10.8, height = 10.8, units = "cm") 
+
+# Color scheme + Color-blind friendly
+cbp1 <- c(
+  "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#999999", "#E69F00", "#56B4E9", "#009E73")
+total_disrupt_p <- ggplot(five_night_sub, aes( x = disrupt_cat, fill = floor)) + scale_y_continuous(labels = scales::percent_format(accuracy = 1L)) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) + facet_grid(rows = vars(floor)) +
+  labs(title="Night time Disruption", x="Average number of disruption episodes", y = "Percentage of participants")+
+  theme_classic() + theme(plot.title = element_text(size=10),
+                          axis.text=element_text(size=10),
+                          axis.title=element_text(size=10))+ scale_fill_manual(values = cbp1) 
+
+print(total_disrupt_p)
+ggsave("disruption_histogram_p.png", plot =total_disrupt_p ,path = paste0(general,"/Graph/"),
        device = "png", width = 10.8, height = 10.8, units = "cm") 
 
 
