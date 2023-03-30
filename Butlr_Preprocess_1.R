@@ -36,7 +36,7 @@ general <- "Z:/SIESTA/Data/Butlr/"
   ## Read csv
   # ==========================
 
-  for (i in 36:length(ls_head_p)) {
+  for (i in 1:length(ls_head_p)) {
     sub_name<- ls_head_p[[i]]
     sub_num <- word(sub_name, start = 2, sep = "_") #Second part of the subject ID
     floor_num <-  word(sub_name, start = 1, sep = "_") #First part of the subject ID
