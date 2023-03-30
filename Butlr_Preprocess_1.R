@@ -143,8 +143,10 @@ setwd(general)
 fwrite(five_min_all,"five_min_dt.csv")
 fwrite(five_sec_all, "five_sec_dt.csv")
 ## ==========================
-## Merge file with time axis
+## Merge file with time axis ---------------------
 # ==========================
+
+# This code will cut data into daytime and nighttime. Then it will only include nighttime data.
 general <- "Z:/SIESTA/Data/Butlr/"
 setwd(general)
 five_min_all<-fread("five_min_dt.csv")
