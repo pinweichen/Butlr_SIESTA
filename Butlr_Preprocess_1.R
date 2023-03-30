@@ -22,6 +22,8 @@ general <- "Z:/SIESTA/Data/Butlr/"
   ls_occ_p <- list.files(path=occupancy_p)
   head_name <- word(ls_head_p,1,sep = "_h")
   occ_name <- word(ls_occ_p,1,sep = "_o")
+  
+  level1_p <- paste0(general, "preprocessed/level_1")
   # Check headcount sensor that does not exist in occupancy sensor and vice versa
   setdiff(head_name,occ_name)
   setdiff(occ_name,head_name)
@@ -29,14 +31,14 @@ general <- "Z:/SIESTA/Data/Butlr/"
   ls_head_p<-ls_head_p[!(head_name %in% setdiff(head_name,occ_name))]
   ls_occ_p<-ls_occ_p[!(occ_name %in% setdiff(occ_name,head_name))]
   
-  #Create empty list to save data.
-  ls_dt_five_sec <- list()
-  ls_dt_five_min <- list()
+  # #Create empty list to save data.
+  # ls_dt_five_sec <- list()
+  # ls_dt_five_min <- list()
   # ==========================
   ## Read csv
   # ==========================
 
-  for (i in 36:length(ls_head_p)) {
+  for (i in 1:length(ls_head_p)) {
     sub_name<- ls_head_p[[i]]
     sub_num <- word(sub_name, start = 2, sep = "_") #Second part of the subject ID
     floor_num <-  word(sub_name, start = 1, sep = "_") #First part of the subject ID
@@ -127,32 +129,61 @@ general <- "Z:/SIESTA/Data/Butlr/"
     
     dt_all_five_min <- merge(dt_h_sum_fivemin,dt_o_sum_fivemin, by = "five_min", all = T)
     
-    ls_dt_five_sec[[i]] <- dt_all
-    ls_dt_five_min[[i]] <- dt_all_five_min
+    fwrite(dt_all,paste0(level1_p,"/five_sec/five_sec_",floor_num,"_",sub_num,".csv"))
+    fwrite(dt_all_five_min,paste0(level1_p,"/five_min/five_min_",floor_num,"_",sub_num,".csv"))
+    
+    ## De-commneted if you need to save this as list and combine them into one data frame.
+    # ls_dt_five_sec[[i]] <- dt_all
+    # ls_dt_five_min[[i]] <- dt_all_five_min
+    
     #rm(dt_h, dt_o, dt_h_sum_fivemin, dt_h_sum, dt_o_sum_fivemin, dt_o_sum)
 
   }
   
 # before this part, for loop seems to go through everything,
 # after running do.call, there's missing data issue. 
-five_min_all <- do.call(rbind,ls_dt_five_min)
-five_sec_all <- do.call(rbind,ls_dt_five_sec)
+  
+# five_min_all <- do.call(rbind,ls_dt_five_min)
+# five_sec_all <- do.call(rbind,ls_dt_five_sec)
 
-rm(ls_head,ls_occ)
-setwd(general)
-fwrite(five_min_all,"five_min_dt.csv")
-fwrite(five_sec_all, "five_sec_dt.csv")
+# rm(ls_head,ls_occ)
+# setwd(general)
+# fwrite(five_min_all,"five_min_dt.csv")
+# fwrite(five_sec_all, "five_sec_dt.csv")
 ## ==========================
 ## Merge file with time axis
 # ==========================
+<<<<<<< Updated upstream
+=======
+  library(data.table)
+  library(caret)
+  library(tidyverse)
+  library(signal)
+  library(lubridate)
+# This code will cut data into daytime and nighttime. Then it will only include nighttime data.
+>>>>>>> Stashed changes
 general <- "Z:/SIESTA/Data/Butlr/"
-setwd(general)
-five_min_all<-fread("five_min_dt.csv")
-five_sec_all<-fread( "five_sec_dt.csv")
+level1_p <- paste0(general, "preprocessed/level_1")
+five_min_p<- paste0(level1_p, "/five_min/")
+setwd(five_min_p)
 
-remove(ls_dt_five_sec)
+file_list <-dir(five_min_p)
+
+ls_dt <- list()
+
+for (i in 1:length(file_list)) {
+  dt <- fread(file_list[i])
+  ls_dt[[i]] <- dt
+}
+
+five_min_all <- Reduce(rbind,ls_dt)
+
+# five_min_all<-fread("five_min_dt.csv")
+# five_sec_all<-fread( "five_sec_dt.csv")
+#remove(ls_dt_five_sec)
 rm(dt_all)
 rm(dt_all_five_min)
+
 
 colnames(five_min_all)
 five_min_all[,timestamp := as.POSIXct(five_min, format = "%Y-%m-%d %H:%M:%OS")]
